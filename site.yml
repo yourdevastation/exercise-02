@@ -1,0 +1,10 @@
+---
+- name: Install python app
+  hosts: app
+  become: true
+  gather_facts: true
+  roles:
+    - common
+    - postgresql
+    - python-sample-app
+    - nginx

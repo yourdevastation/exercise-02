@@ -1,0 +1,5 @@
+---
+roles:
+  - name: ANXS.postgresql
+    version: "v1.12.0"
+  - name: jdauphant.nginx

@@ -1,0 +1,7 @@
+---
+app_dir: "/opt/www/python-sample-app"
+app_user: "app"
+app_group: "{{ app_user }}"
+db_user: "worker"
+db_pass: "{{ vault_db_pass }}"
+db_name: "app"

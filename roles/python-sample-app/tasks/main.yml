@@ -1,0 +1,78 @@
+---
+- name: Add deadsnakes repo
+  apt_repository: repo="ppa:deadsnakes/ppa"
+
+- name: Install git, pip and its requirements.
+  apt:
+    name:
+      - git
+      - libpq-dev
+      - python3.9
+      - python3.9-dev
+      - python3-pip
+      - python3.9-venv
+      - python3-setuptools
+      - python3-packaging
+    state: present
+    update_cache: true
+
+- name: Create group for app user
+  group:
+    name: app
+    state: present
+    system: true
+
+- name: Create python sample app user
+  user:
+    name: "{{ app_user }}"
+    group: "{{ app_group }}"
+    shell: /bin/false
+    system: true
+
+- name: Create app directory with correct ownership
+  file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+
+- name: Clone python-sample-app repository
+  git:
+    repo: "https://github.com/mbaran0v/python-sample-app.git"
+    dest: "{{ app_dir }}"
+  become: true
+  become_user: "{{ app_user }}"
+
+- name: Install app requirements
+  pip:
+    requirements: "{{ app_dir }}/requirements.txt"
+    virtualenv: "{{ app_dir }}/venv"
+    virtualenv_command: python3.9 -m venv
+  become: true
+  become_user: "{{ app_user }}"
+
+- name: Migrate database
+  command: ./venv/bin/flask db upgrade
+  args:
+    chdir: "{{ app_dir }}"
+  environment:
+    FLASK_APP: app.py
+    POSTGRESQL_URL: "postgresql://{{ db_user }}:{{ db_pass }}@localhost/{{ db_name }}"
+  become: true
+  become_user: "{{ app_user }}"
+
+- name: Copy systemd service for python app
+  template:
+    src: app.service.j2
+    dest: /etc/systemd/system/app.service
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Start application and enable service
+  service:
+    name: app
+    enabled: true
+    state: started
+    daemon_reload: true

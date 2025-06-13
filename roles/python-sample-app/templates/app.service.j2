@@ -1,0 +1,15 @@
+[Unit]
+Description=My Flask App
+After=network.target
+
+[Service]
+User={{ app_user }}
+Group={{ app_user }}
+WorkingDirectory={{ app_dir }}
+ExecStart={{ app_dir }}/venv/bin/python app.py
+Environment=FLASK_APP=app.py
+Environment=POSTGRESQL_URL=postgresql://{{ db_user }}:{{ db_pass }}@localhost/{{ db_name }}
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

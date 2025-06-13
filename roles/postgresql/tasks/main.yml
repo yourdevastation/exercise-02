@@ -1,0 +1,43 @@
+---
+- name: "Setup PostgeSQL using ANXS.postgresql"
+  import_role:
+    name: ANXS.postgresql
+  vars:
+    postgresql_version: 12
+    postgresql_apt_dependencies: "{{ postgresql_apt_py3_dependencies }}"
+    postgresql_users:
+      - name: worker
+        pass: worker
+        encrypted: yes
+        state: "present"
+    postgresql_databases:
+      - name: app
+        owner: worker
+        state: "present"
+    postgresql_pg_hba_custom:
+      - type: host
+        database: all
+        user: "{{ postgresql_admin_user }}"
+        address: "0.0.0.0/0"
+        method: "reject"
+        comment: Reject superuser access from all hosts
+    postgresql_pgtune: no
+    postgresql_max_connections: "{{ max_connections }}"
+    postgresql_shared_buffers: "{{ shared_buffers }}"
+    postgresql_effective_cache_size: "{{ effective_cache_size }}"
+    postgresql_maintenance_work_mem: "{{ maintenance_work_mem }}"
+    postgresql_checkpoint_completion_target: "{{ checkpoint_completion_target }}"
+    postgresql_wal_buffers: "{{ wal_buffers }}"
+    postgresql_default_statistics_target: "{{ default_statistics_target }}"
+    postgresql_random_page_cost: "{{ random_page_cost }}"
+    postgresql_effective_io_concurrency: "{{ effective_io_concurrency }}"
+    postgresql_work_mem: "{{ work_mem }}"
+    postgresql_huge_pages: "{{ huge_pages }}"
+    postgresql_min_wal_size: "{{ min_wal_size }}"
+    postgresql_max_wal_size: "{{ max_wal_size }}"
+    postgresql_max_worker_processes: "{{ max_worker_processes }}"
+    postgresql_max_parallel_workers_per_gather: "{{ max_parallel_workers_per_gather }}"
+    postgresql_max_parallel_workers: "{{ max_parallel_workers }}"
+    postgresql_max_parallel_maintenance_workers: "{{ max_parallel_maintenance_workers }}"
+
+
