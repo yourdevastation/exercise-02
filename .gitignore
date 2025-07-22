@@ -5,5 +5,5 @@
 .vagrant/
 
 # External roles
-./roles/ANXS.postgresql
-./roles/jdauphant.nginx
+/roles/ANXS.postgresql/
+/roles/jdauphant.nginx/

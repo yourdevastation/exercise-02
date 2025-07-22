@@ -6,21 +6,30 @@
     postgresql_version: 12
     postgresql_apt_dependencies: "{{ postgresql_apt_py3_dependencies }}"
     postgresql_users:
-      - name: worker
-        pass: worker
+      - name: "{{ db_user }}"
+        pass: "{{ db_pass }}"
         encrypted: yes
         state: "present"
     postgresql_databases:
-      - name: app
-        owner: worker
+      - name: "{{ db_name }}"
+        owner: "{{ db_user }}"
         state: "present"
     postgresql_pg_hba_custom:
+      - type: host
+        database: "{{ db_name }}"
+        user: "{{ db_user }}"
+        address: "192.168.56.1/32"
+        method: "md5"
+        comment: Allow access to the database from the host machine
       - type: host
         database: all
         user: "{{ postgresql_admin_user }}"
         address: "0.0.0.0/0"
         method: "reject"
         comment: Reject superuser access from all hosts
+    postgresql_listen_addresses:
+      - "localhost"
+      - "{{ ansible_host }}"
     postgresql_pgtune: no
     postgresql_max_connections: "{{ max_connections }}"
     postgresql_shared_buffers: "{{ shared_buffers }}"
@@ -39,5 +48,3 @@
     postgresql_max_parallel_workers_per_gather: "{{ max_parallel_workers_per_gather }}"
     postgresql_max_parallel_workers: "{{ max_parallel_workers }}"
     postgresql_max_parallel_maintenance_workers: "{{ max_parallel_maintenance_workers }}"
-
-
