@@ -1,10 +1,7 @@
 ---
-- name: Install python app
+- name: Deploy microservice application
   hosts: app
   become: true
   gather_facts: true
   roles:
-    - common
-    - postgresql
-    - python-sample-app
-    - nginx
+    - deploy
