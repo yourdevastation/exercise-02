@@ -1,6 +1,6 @@
 ---
 - name: Deploy microservice application
-  hosts: app
+  hosts: "{{ target_group_name }}"
   become: true
   gather_facts: true
   roles:
