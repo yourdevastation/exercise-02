@@ -10,8 +10,8 @@
     username: "{{ ci_registry_username }}"
     password: "{{ ci_registry_password }}"
     reauthorize: true
-    become: true
-    become_user: "{{ deploy_user }}"
+  become: true
+  become_user: "{{ deploy_user }}"
 
 - name: Ensure deployment subdirectory exists
   file:
