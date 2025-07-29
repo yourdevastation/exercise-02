@@ -25,6 +25,7 @@
     repo: "deb [arch={{ ansible_architecture }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_facts['distribution_release'] }} stable"
     state: present
     filename: docker
+    update_cache: true
 
 - name: Install Docker packages
   apt:
