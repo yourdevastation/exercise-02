@@ -1,0 +1,109 @@
+- name: Ensure docker is running
+  service:
+    name: docker
+    enabled: true
+    state: started
+
+# - name: Login to GitLab Container Registry
+#   docker_login:
+#     registry: "{{ ci_registry_url }}"
+#     username: "{{ ci_registry_username }}"
+#     password: "{{ ci_registry_password }}"
+#     reauthorize: true
+#     become: true
+#     become_user: "{{ deploy_user }}"
+
+- name: Ensure deployment subdirectory exists
+  file:
+    path: "/home/{{ deploy_user }}/deploy/{{ ci_env }}/{{ app_component }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: '0755'
+
+- name: Ensure nginx configuration directory exists
+  file:
+    path: "/home/{{ deploy_user }}/deploy/{{ ci_env }}/{{ app_component }}/nginx"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: '0755'
+
+- name: Ensure secrets directory exists
+  file:
+    path: "/home/{{ deploy_user }}/deploy/{{ ci_env }}/{{ app_component }}/secrets"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: '0755'
+
+- name: Copy docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: "/home/{{ deploy_user }}/deploy/{{ ci_env }}/{{ app_component }}/docker-compose.yml"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: '0644'
+
+- name: Copy nginx configuration file
+  template:
+    src: nginx.conf.j2
+    dest: "/home/{{ deploy_user }}/deploy/{{ ci_env }}/{{ app_component }}/nginx/nginx.conf"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: '0644'
+
+- name: Create system group for app secrets
+  ansible.builtin.group:
+    name: "{{ app_group }}"
+    gid: "{{ app_group_gid }}"
+    system: true
+    state: present
+
+- name: Create system user for app secrets
+  ansible.builtin.user:
+    name: "{{ app_user }}"
+    uid: "{{ app_user_uid }}"
+    group: "{{ app_group }}"
+    create_home: false
+    shell: /sbin/nologin
+    system: true
+    state: present
+
+- name: Copy postgres password secret
+  copy:
+    content: "{{ postgres_password }}"
+    dest: "/home/{{ deploy_user }}/deploy/{{ ci_env }}/{{ app_component }}/secrets/postgres_password.txt"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0400'
+
+- name: Copy JWT key secret
+  copy:
+    content: "{{ jwt_key }}"
+    dest: "/home/{{ deploy_user }}/deploy/{{ ci_env }}/{{ app_component }}/secrets/jwt_key.txt"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0400'
+
+- name: Stop existing docker containers
+  community.docker.docker_compose_v2:
+    project_src: "/home/{{ deploy_user }}/deploy/{{ ci_env }}/{{ app_component }}"
+    state: absent
+    remove_volumes: "{{ (ci_env == 'dev' or ci_env == 'test' or ci_env == 'demo') | ternary(true, false) }}"
+  become: true
+  become_user: "{{ deploy_user }}"
+
+- name: Run docker compose up
+  community.docker.docker_compose_v2:
+    project_src: "/home/{{ deploy_user }}/deploy/{{ ci_env }}/{{ app_component }}"
+    state: present
+    build: never
+    pull: always
+  become: true
+  become_user: "{{ deploy_user }}"
+
+- name: Remove secrets after deployment
+  file:
+    path: "/home/{{ deploy_user }}/deploy/{{ ci_env }}/{{ app_component }}/secrets"
+    state: absent

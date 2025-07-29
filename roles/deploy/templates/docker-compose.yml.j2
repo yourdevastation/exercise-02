@@ -1,0 +1,79 @@
+x-db-environment: &db-environment
+  POSTGRES_USER: {{ postgres_user }}
+  POSTGRES_DB: {{ postgres_db }}
+
+services:
+  proxy:
+    image: nginx:1.25-alpine
+    mem_limit: 128m
+    cpus: 0.5
+    ports:
+      - {{ host_port }}:{{ nginx_listen_port }}
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - {{ frontend_service_name }}
+      - {{ backend_service_name }}
+    networks:
+      - {{ frontend_service_name }}-network
+      - {{ backend_service_name }}-network
+
+  {{ frontend_service_name }}:
+    image: {{ frontend_image }}
+    container_name: {{ frontend_service_name }}
+    mem_limit: 128m
+    cpus: 0.5
+    networks:
+      - {{ frontend_service_name }}-network
+
+  {{ backend_service_name }}:
+    image: {{ backend_image }}
+    container_name: {{ backend_service_name }}
+    environment:
+      <<: *db-environment
+      POSTGRES_SERVER_HOST: postgres
+      CLIENT_URL: "http://{{ frontend_service_name }}:{{ frontend_port }}"
+      SERVER_PORT: ":{{ backend_port }}"
+      RUN_MIGRATION: "true"
+    secrets:
+      - postgres_password
+      - jwt_key
+    mem_limit: 128m
+    cpus: 0.5
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - {{ backend_service_name }}-network
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      <<: *db-environment
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    mem_limit: 512m
+    cpus: 0.5
+    networks:
+      - {{ backend_service_name }}-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{ postgres_user }}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres_data:
+
+networks:
+  {{ frontend_service_name }}-network:
+  {{ backend_service_name }}-network:
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  jwt_key:
+    file: ./secrets/jwt_key.txt

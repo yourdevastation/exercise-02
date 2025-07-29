@@ -3,6 +3,7 @@
 
 # Vagrant files
 .vagrant/
+Vagrantfile
 
 # External roles
 /roles/ANXS.postgresql/

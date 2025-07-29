@@ -1,0 +1,20 @@
+server {
+    listen {{ nginx_listen_port }};
+    listen [::]:{{ nginx_listen_port }};
+
+    location / {
+        proxy_pass http://{{ frontend_service_name }}:{{ frontend_port }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /api/ {
+        proxy_pass http://{{ backend_service_name }}:{{ backend_port }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
