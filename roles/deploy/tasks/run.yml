@@ -4,14 +4,14 @@
     enabled: true
     state: started
 
-# - name: Login to GitLab Container Registry
-#   docker_login:
-#     registry: "{{ ci_registry_url }}"
-#     username: "{{ ci_registry_username }}"
-#     password: "{{ ci_registry_password }}"
-#     reauthorize: true
-#     become: true
-#     become_user: "{{ deploy_user }}"
+- name: Login to GitLab Container Registry
+  docker_login:
+    registry: "{{ ci_registry_url }}"
+    username: "{{ ci_registry_username }}"
+    password: "{{ ci_registry_password }}"
+    reauthorize: true
+    become: true
+    become_user: "{{ deploy_user }}"
 
 - name: Ensure deployment subdirectory exists
   file:

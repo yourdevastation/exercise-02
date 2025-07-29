@@ -5,8 +5,6 @@ Vagrant.configure('2') do |config|
     app.vm.hostname = 'app'
     app.vm.network 'public_network', ip: '192.168.0.3'
     app.vm.synced_folder '.', '/vagrant', disabled: true
-    app.ssh.insert_key = false
-    app.ssh.private_key_path = '~/.ssh/my_vagrant_key'
 
     app.vm.provider 'virtualbox' do |vb|
       vb.memory = 4096
