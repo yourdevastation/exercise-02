@@ -1,0 +1,7 @@
+---
+- name: Ensure acl package is installed (for setfacl)
+  apt:
+    name: acl
+    state: present
+    update_cache: true
+

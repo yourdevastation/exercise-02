@@ -1,0 +1,8 @@
+---
+- name: Deploy microservice application
+  hosts: "{{ target_group_name }}"
+  become: true
+  gather_facts: true
+  roles:
+    - common
+    - deploy

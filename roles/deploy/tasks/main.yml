@@ -1,0 +1,5 @@
+- name: Setup environment (install Docker, user, groups)
+  import_tasks: setup.yml
+
+- name: Run deployment tasks
+  import_tasks: run.yml

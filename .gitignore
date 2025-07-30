@@ -1,0 +1,9 @@
+# Ansible vault password file
+.vault_password.txt
+
+# Vagrant files
+.vagrant/
+
+# External roles
+/roles/ANXS.postgresql/
+/roles/jdauphant.nginx/
