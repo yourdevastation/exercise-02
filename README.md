@@ -1,6 +1,6 @@
-# Python Sample App with PostgreSQL Provisioning via Ansible and Vagrant
+# Dockerized Deployment with GitLab CI and Ansible
 
-This repository demonstrates provisioning of a Python web application along with a PostgreSQL 12 database using Ansible and Vagrant. It uses community roles and a custom role to deploy and configure the services on a local virtual machine.
+This repository automates deployment of containerized frontend and backend applications using Ansible, Docker Compose, and GitLab CI. The apps are proxied through NGINX and securely configured with secrets and runtime environment via Ansible playbooks.
 
 ## Requirements
 
@@ -11,6 +11,7 @@ Make sure you have the following installed:
 - [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html)
 - [Git](https://git-scm.com/downloads)
 - Optional: WSL2 (Windows Subsystem for Linux) if you are on Windows.
+- Optional: [Docker](https://docs.docker.com/get-docker/), [Docker Compose](https://docs.docker.com/compose/install/) if you want to run the apps in containers locally.
 
 ## Project Structure
 
@@ -18,49 +19,42 @@ The project is based on the [express42 Ansible repository layout](https://github
 
 ```text
 .
-├── ansible.cfg                   # Ansible configuration file
+├── ansible.cfg                   # Ansible configuration
 ├── environments
 │   └── dev
-│       ├── group_vars
-│       │   ├── all
-│       │   │   └── vault.yml     # Encrypted credentials
-│       │   ├── all.yml           # Default variables for all hosts
-│       │   └── app.yml           # Variables for the application
-│       ├── hosts                 # Inventory file
-│       └── host_vars
+│       ├── group_vars            # Environment-specific variables
+│       └── host_vars             # Per-host variables
+├── roles
+│   ├── common                    # Role for common tasks
+│   │   └── tasks
+│   │       └── main.yml
+│   └── deploy                    # Core deployment logic
+│       ├── handlers
+│       ├── tasks
+│       │   ├── main.yml          # Main entry point for the role
+│       │   ├── run.yml           # Tasks to run the application
+│       │   └── setup.yml         # Environment setup tasks
+│       └── templates
+│           ├── docker-compose.yml.j2
+│           └── nginx.conf.j2
 ├── molecule
 │   ├── resources
 │   └── scenario_name
 ├── playbooks
-├── roles
-│   ├── ANXS.postgresql         # Community role for PostgreSQL
-│   ├── jdauphant.nginx         # Community role for Nginx
-│   ├── nginx                   # Custom role for Nginx configuration
-│   │   └── tasks
-│   │       └── main.yml
-│   ├── postgresql              # Custom role for PostgreSQL configuration
-│   │   ├── tasks
-│   │   │   └── main.yml
-│   │   └── vars
-│   │       └── main.yml
-│   └── python-sample-app       # Custom role for the Python sample app
-│       ├── handlers
-│       │   └── main.yml
-│       ├── tasks
-│       │   └── main.yml
-│       └── templates
-│           └── app.service.j2
-├── requirements.txt
+├── site.yml                      # Entry point for provisioning
 ├── requirements.yml
-├── site.yml                    # Main playbook
-├── README.md
-├── LICENSE
-└── Vagrantfile                 # Vagrant configuration file
+├── requirements.txt
+├── Vagrantfile                   # Local VM environment
+└── README.md
 ```
 
 ## Usage
 
-### Clone the Repository
+### GitLab CI/CD
+
+This project is designed to be used with GitLab CI/CD pipelines. The CI/CD configuration files are located in the `frontend` and `backend` repositories. The pipelines automate the build and deployment of the applications.
+
+### Local Development
 
 ```bash
 git clone https://github.com/yourdevastation/exercise-02.git
@@ -68,107 +62,52 @@ cd exercise-02
 git checkout dev
 ```
 
-## Ansible Vault
+You should provide all variables when running the playbook.
 
-Sensitive variables such as database credentials are stored in an encrypted vault file:
+## Running with Vagrant
 
-```bash
-ansible-vault encrypt environments/local/group_vars/vault.yml
-```
-
-To simplify decryption during playbook execution, store the vault password in a local file:
-
-```bash
-echo "vaultpass" > .vault_password.txt
-```
-
-Make sure to reference this file in ansible.cfg:
-
-```ini
-[defaults]
-vault_password_file = .vault_password.txt
-```
-
-Never commit `.vault_password.txt` to version control — it is excluded via `.gitignore`.
-
-To view vault content:
-
-```bash
-ansible-vault view environments/local/group_vars/vault.yml
-```
-
-## Running the VM
-
-To create and provision the VM:
+For local development, you can use Vagrant to set up a virtual machine with all dependencies installed. This is useful for testing the Ansible playbooks and running the applications locally.
 
 ```bash
 vagrant up
 ```
 
-This will automatically apply the Ansible playbook and install all components.
+Write ip address of the VM to environments/local/hosts file:
 
-To re-run provisioning manually:
-
-```bash
-vagrant provision
+```text
+[local]
+<your_vm_ip> ansible_ssh_private_key_file=~/.ssh/id_rsa ansible_user=vagrant
 ```
 
-Alternatively, you can apply the playbook directly:
+You can run the Ansible playbook to provision the VM:
 
 ```bash
-ansible-playbook site.yml
+ansible-playbook -i environments/local/hosts -e ...
 ```
 
-## Accessing Services
+## Deployment Logic
 
-### PostgreSQL
+The deploy role performs the following:
 
-PostgreSQL 12 is configured via the ANXS.postgresql role with custom settings generated using [PGTune](https://pgtune.librasoft.by/). Parameters stored in `roles/postgresql/vars/main.yml`. DB is exposed on port 5432:
+1. Installs Docker and Docker Compose
+2. Creates system user (deploy_user) and adds to Docker group
+3. Logs in to GitLab container registry using CI credentials
+4. Renders and places docker-compose.yml and nginx.conf templates
+5. Stop and remove existing containers
+6. Pulls the latest Docker images for the frontend and backend applications
+7. Starts the Docker Compose stack
+8. Cleans up secrets on the host machine
+
+## Accessing the App
+
+After successful deployment, services are available through NGINX on port 80 of the target host. You can test connectivity with:
 
 ```bash
-psql -h 192.168.56.3 -U your_user -d your_db
+curl http://<your_vm_ip>:<nginx_listen_port>/
 ```
 
-Replace credentials with values from `environments/local/group_vars/vault.yml` and `environments/local/group_vars/app.yml`. (Default user is `worker`, password is `worker`, database is `app`.)
-
-Superuser access is granted to the `postgres` user and restricted to the local machine. (Check `pg_hba.conf` for details.)
-
-### Python Sample App
-
-The Python web app is deployed via a custom role and listens on port 5000. You can access it at:
-
-```bash
-curl http://192.168.56.3:5000/
-```
-
-Port 5000 is forwarded to the host machine, allowing you to access the app from your browser:
-
-```bash
-curl http://localhost:5000/
-```
-
-### Nginx
-
-NGINX proxy was enabled via the jdauphant.nginx role and is configured to forward requests to the Python app. It listens on port 80:
-
-```bash
-curl http://192.168.56.3/
-```
-
-## After Reboot
-
-Both the PostgreSQL database and Python application are configured to start automatically after the VM is restarted.
-
-```bash
-vagrant halt
-vagrant up
-```
-
-Check app service status:
-
-```bash
-systemctl status app.service
-```
+Container ports and service names are defined dynamically based on environment and Git commit SHA.
+Secrets are passed securely to containers via mounted files and removed after deployment completes.
 
 ## License
 
